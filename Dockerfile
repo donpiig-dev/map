@@ -3,7 +3,7 @@ FROM osrm/osrm-backend:latest
 WORKDIR /data
 
 # 1. Descargamos la zona ligera de Berkeley usando ADD para evitar depender de curl
-ADD https://download.bbbike.org/osm/bbbike/LosAngeles/LosAngeles.osm.pbf /data/zona-reparto.osm.pbf
+ADD https://download.bbbike.org/osm/bbbike/Berkeley/Berkeley.osm.pbf /data/zona-reparto.osm.pbf
 
 # 2. PROCESAMIENTO CH: Cambiamos partition/customize por osrm-contract
 # Forzamos 1 solo hilo para asegurar que Railway apruebe el proceso en segundos
