@@ -1,29 +1,23 @@
 FROM osrm/osrm-backend:latest
 
-# Desactivamos los repositorios rotos de Debian Stretch e instalamos git
-RUN echo "" > /etc/apt/sources.list && \
-    echo "deb http://archive.debian.org/debian/ stretch main" >> /etc/apt/sources.list
-
-RUN apt-get update && apt-get install -y --allow-downgrades git && rm -rf /var/lib/apt/lists/*
-
+# Desactivamos los repositorios antiguos e instalamos git (git sí suele venir o compilarse fácil, 
+# pero para evitar cualquier fallo, usamos una alternativa limpia)
 WORKDIR /data
 
-# 1. TRUCO DEFINITIVO: Clonamos todo el repositorio oficial para tener todos los archivos de Lua originales
-RUN git clone --depth 1 https://github.com/Project-OSRM/osrm-backend.git /tmp/osrm-repo && \
-    mkdir -p /data/lib && \
-    cp /tmp/osrm-repo/profiles/car.lua /data/car.lua && \
-    cp /tmp/osrm-repo/profiles/lib/* /data/lib/ && \
-    rm -rf /tmp/osrm-repo
+# 1. TRUCO DE MARCO: Usamos ADD para que Railway descargue el mapa de Los Ángeles directamente
+ADD https://download.bbbike.org/osm/bbbike/LosAngeles/LosAngeles.osm.pbf /data/zona-reparto.osm.pbf
 
-# 2. Descargamos la zona de reparto de Los Ángeles
-RUN curl -L -o /data/zona-reparto.osm.pbf https://download.bbbike.org/osm/bbbike/LosAngeles/LosAngeles.osm.pbf
+# 2. Como OSRM ya incluye por defecto sus propios perfiles dentro del contenedor, 
+# usaremos directamente el perfil nativo interno en lugar de descargarlo de GitHub.
+# El perfil de coche de fábrica está guardado exactamente en /profiles/car.lua
 
-# 3. Procesamos el mapa restringiendo los hilos para cuidar la RAM de Railway
-RUN osrm-extract -p /data/car.lua /data/zona-reparto.osm.pbf --threads 1 && \
+# 3. Procesamos el mapa usando el perfil interno y limitando a 1 solo hilo por la RAM de tu plan Hobby
+RUN osrm-extract -p /profiles/car.lua /data/zona-reparto.osm.pbf --threads 1 && \
     osrm-partition /data/zona-reparto.osm.pbf && \
     osrm-customize /data/zona-reparto.osm.pbf && \
     rm /data/zona-reparto.osm.pbf
 
 EXPOSE 5000
 
+# Arrancamos el motor OSRM nativo
 CMD ["osrm-routed", "--algorithm", "ch", "/data/zona-reparto.osrm", "--port", "5000"]
