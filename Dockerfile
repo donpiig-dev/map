@@ -20,18 +20,20 @@ COPY --from=osrm_source /usr/local/bin/osrm-* /usr/local/bin/
 
 WORKDIR /data
 
-# 1. Descargamos el perfil oficial de coche (car.lua) y sus librerías directamente de GitHub
-RUN mkdir -p /data/profiles && \
-    curl -L -o /data/profiles/car.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/car.lua && \
+# 1. Creamos TODAS las subcarpetas necesarias para los perfiles de OSRM
+RUN mkdir -p /data/profiles/lib
+
+# 2. Descargamos el perfil oficial de coche (car.lua) y sus dependencias directamente de GitHub
+RUN curl -L -o /data/profiles/car.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/car.lua && \
     curl -L -o /data/profiles/lib/raster.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/raster.lua && \
     curl -L -o /data/profiles/lib/guidance.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/guidance.lua && \
     curl -L -o /data/profiles/lib/destination.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/destination.lua && \
     curl -L -o /data/profiles/lib/sequence.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/sequence.lua
 
-# 2. Descargamos el extracto urbano ligero de Los Ángeles
+# 3. Descargamos el extracto urbano ligero de Los Ángeles
 RUN curl -L -o /data/zona-reparto.osm.pbf https://download.bbbike.org/osm/bbbike/LosAngeles/LosAngeles.osm.pbf
 
-# 3. Procesamos el mapa usando el perfil que descargamos y limitando a 1 solo hilo por RAM
+# 4. Procesamos el mapa usando el perfil descargado y limitando a 1 solo hilo por RAM
 RUN osrm-extract -p /data/profiles/car.lua /data/zona-reparto.osm.pbf --threads 1 && \
     osrm-partition /data/zona-reparto.osm.pbf && \
     osrm-customize /data/zona-reparto.osm.pbf && \
