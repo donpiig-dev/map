@@ -8,26 +8,22 @@ RUN apt-get update && apt-get install -y --allow-downgrades curl && rm -rf /var/
 
 WORKDIR /data
 
-# 1. Creamos la estructura de carpetas para las dependencias
+# 1. Creamos la estructura de carpetas necesaria
 RUN mkdir -p /data/lib
 
-# 2. Descargamos el script principal
+# 2. Descargamos el script principal de coche
 RUN curl -L -o /data/car.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/car.lua
 
-# 3. Descargamos TODO el set de librerías del repositorio oficial
-RUN curl -L -o /data/lib/set.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/set.lua && \
-    curl -L -o /data/lib/raster.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/raster.lua && \
-    curl -L -o /data/lib/guidance.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/guidance.lua && \
-    curl -L -o /data/lib/destination.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/destination.lua && \
-    curl -L -o /data/lib/sequence.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/sequence.lua && \
-    curl -L -o /data/lib/way_handlers.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/way_handlers.lua && \
-    curl -L -o /data/lib/relations.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/relations.lua && \
-    curl -L -o /data/lib/tags.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/tags.lua
+# 3. TRUCO DEFINITIVO: Descargamos TODAS las librerías del repositorio de golpe en un bucle
+# Esto incluye set, raster, guidance, destination, sequence, way_handlers, relations, tags, measure y cualquier otra.
+RUN for file in set raster guidance destination sequence way_handlers relations tags measure access handlers; do \
+      curl -L -o /data/lib/${file}.lua https://raw.githubusercontent.com/Project-OSRM/osrm-backend/master/profiles/lib/${file}.lua; \
+    done
 
 # 4. Descargamos la zona de reparto de Los Ángeles
 RUN curl -L -o /data/zona-reparto.osm.pbf https://download.bbbike.org/osm/bbbike/LosAngeles/LosAngeles.osm.pbf
 
-# 5. Procesamos el mapa restringiendo los hilos para cuidar la RAM
+# 5. Procesamos el mapa restringiendo los hilos para cuidar la RAM de tu plan Hobby
 RUN osrm-extract -p /data/car.lua /data/zona-reparto.osm.pbf --threads 1 && \
     osrm-partition /data/zona-reparto.osm.pbf && \
     osrm-customize /data/zona-reparto.osm.pbf && \
